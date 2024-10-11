@@ -1,0 +1,151 @@
+services:
+  firewall_wan:
+    build:
+      context: ./firewall_wan
+    image: alpine_custom_firewall_wan
+    cap_add:
+      - NET_ADMIN
+    sysctls:
+      net.ipv4.ip_forward: 1
+    networks:
+      macvlan_net:
+        ipv4_address: 192.168.1.15
+      wan_net:
+        ipv4_address: 10.0.1.254
+
+  firewall_internal:
+    build:
+      context: ./firewall_internal
+    image: ubuntu_custom_firewall_technicians
+    cap_add:
+      - NET_ADMIN
+    sysctls:
+      net.ipv4.ip_forward: 1
+    networks:
+      internal_net:
+        ipv4_address: 10.0.2.254
+      wan_net:
+        ipv4_address: 10.0.1.253
+
+  firewall_finance:
+    build:
+      context: ./firewall_finance
+    image: ubuntu_custom_firewall_technicians
+    cap_add:
+      - NET_ADMIN
+    sysctls:
+      net.ipv4.ip_forward: 1
+    networks:
+      internal_net:
+        ipv4_address: 10.0.2.253
+      finance_net:
+        ipv4_address: 10.0.11.254
+
+  firewall_technicians:
+    build:
+      context: ./firewall_technicians
+    image: ubuntu_custom_firewall_technicians
+    cap_add:
+      - NET_ADMIN
+    sysctls:
+      net.ipv4.ip_forward: 1
+    networks:
+      internal_net:
+        ipv4_address: 10.0.2.252
+      technicians_net:
+        ipv4_address: 10.0.12.254
+
+
+  internal_db:
+    image: mariadb:10.11.8
+    environment:
+      MYSQL_ROOT_PASSWORD: example
+      MYSQL_ROOT_HOST: '%'
+    command: --bind-address=0.0.0.0
+    cap_add:
+      - NET_ADMIN
+    networks:
+      internal_net:
+        ipv4_address: 10.0.2.10
+    volumes:
+      - internal_db_data:/var/lib/mysql
+    restart: unless-stopped
+
+  finance_db:
+    image: mariadb:10.11.8
+    environment:
+      MYSQL_ROOT_PASSWORD: financepass
+      MYSQL_ROOT_HOST: '%'
+    command: --bind-address=0.0.0.0
+    networks:
+      finance_net:
+        ipv4_address: 10.0.11.10
+    volumes:
+      - finance_db_data:/var/lib/mysql
+    restart: unless-stopped
+
+  technicians_db:
+    image: mariadb:10.11.8
+    environment:
+      MYSQL_ROOT_PASSWORD: techpass
+      MYSQL_ROOT_HOST: '%'
+    command: --bind-address=0.0.0.0
+    networks:
+      technicians_net:
+        ipv4_address: 10.0.12.10
+    volumes:
+      - technicians_db_data:/var/lib/mysql
+    restart: unless-stopped
+
+  technicians_client:
+    image: alpine
+    cap_add:
+      - NET_ADMIN
+    networks:
+      technicians_net:
+        ipv4_address: 10.0.12.2
+    command: >
+      sh -c "
+      apk update && apk add --no-cache mariadb-client iproute2 iputils;
+      ln -s /usr/bin/mariadb /usr/bin/mysql;
+      ip route del default;
+      ip route add default via 10.0.12.254 dev eth0;
+      sleep 3600
+      "
+
+networks:
+  macvlan_net:
+    driver: macvlan
+    ipam:
+      config:
+        - subnet: 192.168.1.0/24
+
+  wan_net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.0.1.0/24
+
+  internal_net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.0.2.0/24
+
+  finance_net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.0.11.0/24
+
+  technicians_net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.0.12.0/24
+
+volumes:
+  internal_db_data:
+  openvpn_data:
+  finance_db_data:
+  technicians_db_data:
