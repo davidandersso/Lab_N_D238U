@@ -13,7 +13,7 @@ Network Lab Docker-compose
 
 ## Tests
 - Enter the technicians client:
-`docker exec -it dockerlab_n-technicians_client-1 /bin/sh`
+`docker exec -it dockerlab_n_technicians_client_1 /bin/sh`
 - Connect to tech database:
 `mysql -h 10.0.12.10 -u root -p`
 Password: techpass
@@ -25,7 +25,7 @@ Password: example
 
 ------------
 - Enter the internal database:
-`docker exec -it dockerlab_n-internal_db-1 /bin/sh`
+`docker exec -it dockerlab_n_internal_db_1 /bin/sh`
 - Try to connect to technicians database:
 `mysql -h 10.0.12.10 -u root -p`
 Password: techpass
